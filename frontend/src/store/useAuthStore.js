@@ -14,11 +14,11 @@ export const useAuthStore = create((set, get) => ({
   isCheckingAuth: true,
   onlineUsers: [],
   socket: null,
+  notifications: [],  // Add notifications state
 
   checkAuth: async () => {
     try {
       const res = await axiosInstance.get("/auth/check");
-
       set({ authUser: res.data });
       get().connectSocket();
     } catch (error) {
@@ -49,7 +49,6 @@ export const useAuthStore = create((set, get) => ({
       const res = await axiosInstance.post("/auth/login", data);
       set({ authUser: res.data });
       toast.success("Logged in successfully");
-
       get().connectSocket();
     } catch (error) {
       toast.error(error.response.data.message);
@@ -72,7 +71,6 @@ export const useAuthStore = create((set, get) => ({
   updateProfile: async (data) => {
     set({ isUpdatingProfile: true });
     try {
-      
       const res = await axiosInstance.put("/auth/update-profile", data);
       set({ authUser: res.data });
       toast.success("Profile updated successfully");
@@ -88,7 +86,7 @@ export const useAuthStore = create((set, get) => ({
     if (searchTerm.trim() !== "") {
       try {
         const res = await axiosInstance.get(`/friend/search/${searchTerm}`);
-        const data = res.data
+        const data = res.data;
         set({ filteredUsers: data });
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -151,7 +149,25 @@ export const useAuthStore = create((set, get) => ({
       toast.error("Error rejecting friend request.");
     }
   },
-  
+
+  // Manage notifications
+  addNotification: (notification) => {
+    set((state) => ({
+      notifications: [...state.notifications, notification],
+    }));
+  },
+
+  removeNotification: (notificationId) => {
+    set((state) => ({
+      notifications: state.notifications.filter(
+        (notif) => notif.id !== notificationId
+      ),
+    }));
+  },
+
+  clearNotifications: () => {
+    set({ notifications: [] });
+  },
 
   connectSocket: () => {
     const { authUser } = get();
@@ -169,7 +185,33 @@ export const useAuthStore = create((set, get) => ({
     socket.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds });
     });
+
+    // Listen for notifications
+    socket.on("friendRequestReceived", (data) => {
+      get().addNotification({
+        id: data.receiverId,
+        message: `New friend request from ${data.senderName}`,
+        type: "friendRequest",
+      });
+    });
+
+    socket.on("friendRequestAccepted", (data) => {
+      get().addNotification({
+        id: data.receiverId,
+        message: `Your friend request to ${data.senderName} was accepted.`,
+        type: "friendRequest",
+      });
+    });
+
+    socket.on("friendRequestRejected", (data) => {
+      get().addNotification({
+        id: data.receiverId,
+        message: `Your friend request to ${data.senderName} was rejected.`,
+        type: "friendRequest",
+      });
+    });
   },
+
   disconnectSocket: () => {
     if (get().socket?.connected) get().socket.disconnect();
   },

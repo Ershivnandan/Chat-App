@@ -4,9 +4,14 @@ import { LogOut, MessageSquare, Settings, User, Bell, Search } from "lucide-reac
 import { useState, useEffect } from "react";
 
 const Navbar = () => {
-  const { logout, authUser, onlineUsers, filteredUsers, searchUsers } = useAuthStore();
+  const { logout, authUser, filteredUsers, searchUsers, notifications, addNotification, sendFriendRequest } = useAuthStore((state) => state);
   const [searchTerm, setSearchTerm] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
+
+  const handleSendFriendRequest = (reciverId) =>{
+    console.log(reciverId)
+    sendFriendRequest(reciverId)
+  }
 
   // Debounce search functionality
   useEffect(() => {
@@ -14,15 +19,34 @@ const Navbar = () => {
       searchUsers(searchTerm); // Use the store's searchUsers function
     }, 500); // 500ms debounce delay
 
-    
     return () => clearTimeout(debounceTimeout);
   }, [searchTerm, searchUsers]);
 
+  // Handle notifications toggle
   const toggleNotifications = () => setShowNotifications(!showNotifications);
 
- 
+  // Handle logout
   const isFriend = (userId) => {
     return authUser?.friends?.includes(userId);
+  };
+
+  // Show notifications dynamically in the dropdown
+  const renderNotifications = () => {
+    return notifications.map((notif, index) => (
+      <li key={index} className="flex justify-between items-center p-2">
+        <span className="text-sm">{notif.message}</span>
+        <button className="btn btn-xs btn-primary" onClick={() => handleNotificationClick(notif.id)}>
+          View
+        </button>
+      </li>
+    ));
+  };
+
+  const handleNotificationClick = (notificationId) => {
+    // You can implement specific logic to handle notification clicks, like navigating to the user's profile
+    console.log("Notification clicked: ", notificationId);
+    // Optionally clear notifications here if required:
+    addNotification(notificationId); // Clear notification from the store
   };
 
   return (
@@ -61,7 +85,7 @@ const Navbar = () => {
                         <span>{user.fullName}</span>
                         {/* Conditionally show the "Send Request" button */}
                         {!isFriend(user._id) ? (
-                          <button className="btn btn-xs btn-primary">Send Request</button>
+                          <button className="btn btn-xs btn-primary" onClick={()=> handleSendFriendRequest(user._id)}>Send Request</button>
                         ) : (
                           <button className="btn btn-xs btn-disabled" disabled>
                             Friend
@@ -78,16 +102,15 @@ const Navbar = () => {
             <button onClick={toggleNotifications} className="relative">
               <Bell className="w-5 h-5 text-primary" />
               <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                {onlineUsers.length}
+                {notifications.length}
               </span>
             </button>
+
             {showNotifications && (
               <div className="absolute right-0 mt-2 p-2 bg-white border border-base-300 shadow-lg rounded-md w-64">
                 <ul className="space-y-2">
-                  <li className="flex justify-between items-center">
-                    <span className="text-sm">New message from John</span>
-                    <button className="btn btn-xs btn-primary">View</button>
-                  </li>
+                  {renderNotifications()}
+                  {notifications.length === 0 && <li>No new notifications</li>}
                 </ul>
               </div>
             )}
