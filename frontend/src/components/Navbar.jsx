@@ -4,7 +4,7 @@ import { LogOut, MessageSquare, Settings, User, Bell, Search } from "lucide-reac
 import { useState, useEffect } from "react";
 
 const Navbar = () => {
-  const { logout, authUser, filteredUsers, searchUsers, notifications, addNotification, sendFriendRequest } = useAuthStore((state) => state);
+  const { logout, authUser, filteredUsers, searchUsers, notifications, addNotification, sendFriendRequest, acceptFriendRequest, rejectFriendRequest } = useAuthStore((state) => state);
   const [searchTerm, setSearchTerm] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -13,40 +13,53 @@ const Navbar = () => {
     sendFriendRequest(reciverId)
   }
 
-  // Debounce search functionality
+
   useEffect(() => {
     const debounceTimeout = setTimeout(() => {
-      searchUsers(searchTerm); // Use the store's searchUsers function
-    }, 500); // 500ms debounce delay
+      searchUsers(searchTerm); 
+    }, 500); 
 
     return () => clearTimeout(debounceTimeout);
   }, [searchTerm, searchUsers]);
 
-  // Handle notifications toggle
+
   const toggleNotifications = () => setShowNotifications(!showNotifications);
 
-  // Handle logout
   const isFriend = (userId) => {
     return authUser?.friends?.includes(userId);
   };
 
-  // Show notifications dynamically in the dropdown
   const renderNotifications = () => {
     return notifications.map((notif, index) => (
       <li key={index} className="flex justify-between items-center p-2">
         <span className="text-sm">{notif.message}</span>
-        <button className="btn btn-xs btn-primary" onClick={() => handleNotificationClick(notif.id)}>
-          View
+        <div>
+        <button className="btn btn-xs btn-primary bg-green-500" onClick={() => handleNotificationClick(notif, "accept")}>
+          Accept
         </button>
+        <button className="btn btn-xs btn-primary bg-red-500" onClick={() => handleNotificationClick(notif, "reject")}>
+          Reject
+        </button>
+        </div>
       </li>
     ));
   };
 
-  const handleNotificationClick = (notificationId) => {
-    // You can implement specific logic to handle notification clicks, like navigating to the user's profile
-    console.log("Notification clicked: ", notificationId);
-    // Optionally clear notifications here if required:
-    addNotification(notificationId); // Clear notification from the store
+  const handleNotificationClick = (notif, statusType) => {
+    
+    switch (statusType) {
+      case "accept":
+        acceptFriendRequest(notif.senderId)
+        break;
+      case "reject":
+        rejectFriendRequest(notif.senderId);
+        break;
+    
+      default:
+        break;
+    }
+
+    addNotification(notif.id);
   };
 
   return (
